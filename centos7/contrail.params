@@ -1,0 +1,6 @@
+nic=__DEVICE__
+host_name=__HOST_NAME__
+host_ip=__HOST_IP__
+host_ip_prefix=__HOST_IP_PREFIX__
+gateway=__GATEWAY__
+controller=__CONTROLLER__
