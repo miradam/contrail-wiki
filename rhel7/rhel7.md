@@ -32,6 +32,7 @@
   * Host name in `/etc/hostname`
   * Resovable host name in `/etc/hosts`
   * NTP
+  * Disable SELinux in `/etc/selinux/config`.
   * Enable `PasswordAuthentication` in `/etc/ssh/sshd_config`.
 * Reboot.
 * Login VM by SSH.
@@ -78,7 +79,7 @@
 # cd /usr/lib/jvm/java-1.7.0-openjdk-1.7.0.75-2.5.4.2.el7_0.x86_64/jre/lib/security
 # sed -i -e 's/jdk.tls.disabledAlgorithms=SSLv3/#jdk.tls.disabledAlgorithms=SSLv3/g' java.security
 ```
-* Copy vRouter kernel module to the right place.
+* On compute nodes, copy vRouter kernel module to the right place.
 ```
 # cp -r /lib/modules/3.10.0-123.el7.x86_64/extra/net /lib/modules/$(uname -r)/extra
 ```
