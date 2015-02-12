@@ -2,6 +2,7 @@
 
 ## Create RHEL 7 VM
 * Download rhel-guest-image-7.0-20140930.0.x86_64.qcow2 from RedHat with subscription.
+
 * Hardcode root password into the image, so it can be launched by libvirt.
 ```
 # modprobe nbd
@@ -17,6 +18,7 @@
 # umount /mnt/image
 # qemu-nbd -d /dev/nbd0
 ```
+
 * Launch RHEL 7 VM. An example of XML file is in Appendix A.
 ```
 # virsh create <XML file>
@@ -27,15 +29,20 @@
 ```
 # virsh console <VM name>
 ```
+
 * Configure the following items.
-  * Network interface, gateway, DNS, etc.
+  * Network interface, IP address, gateway, DNS, etc.
   * Host name in `/etc/hostname`
-  * Resovable host name in `/etc/hosts`
+  * Resovable host name (in `/etc/hosts` or DNS), ensure `ping $(hostname)` work. In case of separate management and control/data networks with different interfaces, a hostname on control/data network is required for control/data address.
   * NTP
   * Disable SELinux in `/etc/selinux/config`.
-  * Enable `PasswordAuthentication` in `/etc/ssh/sshd_config`.
+  * Enable `PermitRootLogin` in `/etc/ssh/sshd_config`.
+  * Enable either `PasswordAuthentication` or `PubkeyAuthentication` in `/etc/ssh/sshd_config`.
+
 * Reboot.
+
 * Login VM by SSH.
+
 * Register subscription and repos.
 ```
 # subscription-manager register --username <username> --password <password>
@@ -47,10 +54,12 @@
 # subscription-manager repos --enable=rhel-7-server-rpms
 # subscription-manager repos --enable=rhel-7-server-openstack-5.0-rpms
 ```
+
 * Install `wget` package.
 ```
 # yum install -y wget
 ```
+
 * Register EPEL repo.
 ```
 # wget http://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-5.noarch.rpm
@@ -58,41 +67,60 @@
 ```
 
 ## Install Contrail
+Contrail installation and provisioning are done by Fab utility on the builder (one server in the cluster or a separate server). All `fab` command has to be executed in `/opt/contrail/utils` directory.
+
 * Copy contrail-install-packages-2.0-22~icehouse.el7.noarch.rpm onto VM and install it.
 ```
 # rpm -ivh contrail-install-packages-2.0-22~icehouse.el7.noarch.rpm
 ```
+
 * Patch /opt/contrail/contrail_packages/setup.sh, and run it.
 ```
 # cd /opt/contrail/contrail_packages
 # sed -i -e 's/pip-python/pip/g' setup.sh
 # ./setup.sh
 ```
+
 * Create /opt/contrail/utils/fabfile/testbeds/testbed.py. An example is in Appendix B.
-* Install Contrail packages.
+In case that compute nodes are installed separately, don't put compute nodes in testbed.py for now.
+
+* Install Contrail installation package.
+This step copies Contrail installation package to all non-OpenStack nodes and install it.
+```
+# fab install_pkg_all_without_openstack:<package file>
+```
+
+* Patch /opt/contrail/contrail_packages/setup.sh on all other non-OpenStack nodes.
+
+* Install Contrail service packages.
+This step creates local repo of Contrail packages and install them on all non-OpenStack nodes.
 ```
 # cd /opt/contrail/utils
 # fab install_without_openstack
 ```
+
 * Enable SSLv3 in Java.
+Due to a recent Java security update, SSLv3 is disabled by default. But some Contrail services still use that to connect to the IF-MAP server. So this patch is required to enable SSLv3 again.
 ```
 # cd /usr/lib/jvm/java-1.7.0-openjdk-1.7.0.75-2.5.4.2.el7_0.x86_64/jre/lib/security
 # sed -i -e 's/jdk.tls.disabledAlgorithms=SSLv3/#jdk.tls.disabledAlgorithms=SSLv3/g' java.security
 ```
-* On compute nodes, copy vRouter kernel module to the right place.
-```
-# cp -r /lib/modules/3.10.0-123.el7.x86_64/extra/net /lib/modules/$(uname -r)/extra
-```
+
 * Disable SELinux.
   * Edit `/etc/selinux/config` and set `SELINUX` to `disabled`. This change is permanent but requires reboot.
   * Run command `setenforce 0`. This change is transit but takes effect immediately.
-# Provisioning Contrail.
+
+* On compute nodes, copy vRouter kernel module to the right place.
+This step is not required is compute nodes are installed separately.
+```
+# cp -r /lib/modules/3.10.0-123.el7.x86_64/extra/net /lib/modules/$(uname -r)/extra
+```
+
+## Provisioning Contrail.
 ```
 # cd /opt/contrail/utils
 # fab setup_without_openstack
 ```
-
-
 
 
 ## Appendix A
@@ -338,7 +366,7 @@ env.keystone = {
 env.openstack = {
     'service_token' : 'aa0f54bf01884671a758f146a9b2c5be', #Common service token for for all openstack services
     'amqp_host' : '10.161.208.134',            #IP of AMQP Server to be used in openstack
-#    'manage_amqp' : 'yes',                    #Default no, Manage seperate AMQP for openstack services in openstack nodes.
+    'manage_amqp' : 'no',                    #Default no, Manage seperate AMQP for openstack services in openstack nodes.
 }
 
 # Neutron specific configuration 
@@ -347,7 +375,7 @@ env.openstack = {
 #}
 
 #To enable multi-tenancy feature
-multi_tenancy = True
+multi_tenancy = False
 
 #To enable haproxy feature
 #haproxy = True
