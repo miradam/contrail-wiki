@@ -69,20 +69,20 @@
 ## Install Contrail
 Contrail installation and provisioning are done by Fab utility on the builder (one server in the cluster or a separate server). All `fab` command has to be executed in `/opt/contrail/utils` directory.
 
-* Copy contrail-install-packages-2.0-22~icehouse.el7.noarch.rpm onto VM and install it.
+* Copy `contrail-install-packages-2.0-22~icehouse.el7.noarch.rpm` onto VM and install it.
 ```
 # rpm -ivh contrail-install-packages-2.0-22~icehouse.el7.noarch.rpm
 ```
 
-* Patch /opt/contrail/contrail_packages/setup.sh, and run it.
+* Patch `/opt/contrail/contrail_packages/setup.sh`, and run it.
 ```
 # cd /opt/contrail/contrail_packages
 # sed -i -e 's/pip-python/pip/g' setup.sh
 # ./setup.sh
 ```
 
-* Create /opt/contrail/utils/fabfile/testbeds/testbed.py. An example is in Appendix B.
-In case that compute nodes are installed separately, don't put compute nodes in testbed.py for now.
+* Create `/opt/contrail/utils/fabfile/testbeds/testbed.py`. An example is in Appendix B.
+In case that compute nodes are installed separately, don't put compute nodes in `testbed.py` for now.
 
 * Install Contrail installation package.
 This step copies Contrail installation package to all non-OpenStack nodes and install it.
@@ -90,7 +90,7 @@ This step copies Contrail installation package to all non-OpenStack nodes and in
 # fab install_pkg_all_without_openstack:<package file>
 ```
 
-* Patch /opt/contrail/contrail_packages/setup.sh on all other non-OpenStack nodes.
+* Patch `/opt/contrail/contrail_packages/setup.sh` on all other non-OpenStack nodes.
 
 * Install Contrail service packages.
 This step creates local repo of Contrail packages and install them on all non-OpenStack nodes.
