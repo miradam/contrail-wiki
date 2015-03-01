@@ -1,20 +1,27 @@
 # Integrate Contrail 2.0-22 with RHEL OSP 5
 
 ## 1 Overview
+
 This guide is for integrating OpenContrail 2.0 with RHEL OSP 5 (OpenStack IceHouse on RHEL 7.0).
 
 In this example, three VMs are required.
 
 1. OpenStack controller
+
    See Appendix A for the list of installed services and their status.
+
 2. OpenContrail controller
+
    It has OpenContrail configuration, analytics, database and control services.
+
 3. Compute node
+
    It has OpenStack Nova compute and OpenContrail vRouter services.
 
 ## 2 Create RHEL 7.0 VMs
 
 ### 2.1 Build RHEL 7.0 VM image
+
 * Download rhel-guest-image-7.0-20140930.0.x86_64.qcow2 from RedHat with subscription.
 
 * Hardcode root password into the image, so it can be launched by libvirt.
@@ -39,6 +46,7 @@ In this example, three VMs are required.
 ```
 
 ### 2.2 Provisioning RHEL 7 VM
+
 * Login VM from console.
 ```
 # virsh console <VM name>
@@ -82,7 +90,9 @@ In this example, three VMs are required.
 ```
 
 ## 3 OpenStack controller
+
 ### 3.1 Install OpenStack
+
 * Install `openstack-packstack` and install OpenStack.
 ```
 # yum install -y openstack-packstack
@@ -90,6 +100,7 @@ In this example, three VMs are required.
 ```
 
 ### 3.2 Provisioning OpenStack
+
 * Set password for user `admin`.
 ```
 # source keystonerc_admin
@@ -138,7 +149,10 @@ In this example, three VMs are required.
 ```
 
 ## 4 OpenContrail controller
+
 Contrail installation and provisioning are done by Fab utility on the builder (one server in the cluster or a separate server). All `fab` command has to be executed in `/opt/contrail/utils` directory.
+
+### 4.1 Install OpenContrail
 
 * Copy `contrail-install-packages-2.0-22~icehouse.el7.noarch.rpm` onto VM and install it.
 ```
@@ -187,7 +201,8 @@ This step is not required is compute nodes are installed separately.
 # cp -r /lib/modules/3.10.0-123.el7.x86_64/extra/net /lib/modules/$(uname -r)/extra
 ```
 
-## Provisioning Contrail.
+### 4.2 Provisioning Contrail.
+
 ```
 # cd /opt/contrail/utils
 # fab setup_without_openstack
