@@ -1,6 +1,19 @@
-# Install Contrail 2.0-22 on RHEL 7
+# Integrate Contrail 2.0-22 with RHEL OSP 5
 
-## Create RHEL 7 VM
+## 1 Overview
+This guide is for integrating OpenContrail 2.0 with RHEL OSP 5 (OpenStack IceHouse on RHEL 7.0).
+
+In this example, three VMs are required.
+1. OpenStack controller
+   See Appendix A for the list of installed services and their status.
+2. OpenContrail controller
+   It has OpenContrail configuration, analytics, database and control services.
+3. Compute node
+   It has OpenStack Nova compute and OpenContrail vRouter services.
+
+## 2 Create RHEL 7.0 VMs
+
+### 2.1 Build RHEL 7.0 VM image
 * Download rhel-guest-image-7.0-20140930.0.x86_64.qcow2 from RedHat with subscription.
 
 * Hardcode root password into the image, so it can be launched by libvirt.
@@ -19,12 +32,12 @@
 # qemu-nbd -d /dev/nbd0
 ```
 
-* Launch RHEL 7 VM. An example of XML file is in Appendix A.
+* Launch RHEL 7 VM. An example of XML file is in Appendix B.
 ```
 # virsh create <XML file>
 ```
 
-## Provisioning RHEL 7 VM
+### 2.2 Provisioning RHEL 7 VM
 * Login VM from console.
 ```
 # virsh console <VM name>
@@ -38,6 +51,7 @@
   * Disable SELinux in `/etc/selinux/config`.
   * Enable `PermitRootLogin` in `/etc/ssh/sshd_config`.
   * Enable either `PasswordAuthentication` or `PubkeyAuthentication` in `/etc/ssh/sshd_config`.
+  * Disable `iptables`, `ip6tables` and `firewalld`.
 
 * Reboot.
 
@@ -66,7 +80,63 @@
 # rpm -ivh epel-release-7-5.noarch.rpm
 ```
 
-## Install Contrail
+## 3 OpenStack controller
+### 3.1 Install OpenStack
+* Install `openstack-packstack` and install OpenStack.
+```
+# yum install -y openstack-packstack
+# packstack --allinone --mariadb-pw=juniper123 --use-epel=n --nagios-install=n
+```
+
+### 3.2 Provisioning OpenStack
+* Set password for user `admin`.
+```
+# source keystonerc_admin
+# keystone user-password-update --pass <password> admin
+```
+
+* Update `OS_PASSWORD` in `keystonerc_admin` with newly created password.
+
+* Stop and disable Neutron services.
+```
+# systemctl stop neutron-server
+# systemctl disable neutron-server
+# systemctl stop neutron-dhcp-agent
+# systemctl disable neutron-dhcp-agent
+# systemctl stop neutron-l3-agent
+# systemctl disable neutron-l3-agent
+# systemctl stop neutron-metadata-agent
+# systemctl disable neutron-metadata-agent
+# systemctl stop neutron-openvswitch-agent
+# systemctl disable neutron-openvswitch-agent
+```
+
+* Disable Nova compute service.
+```
+# nova service-disable <hostname> nova-compute
+# systemctl stop openstack-nova-compute
+# systemctl disable openstack-nova-compute
+```
+
+* Set Nova parameters.
+```
+# openstack-config --set /etc/nova/nova.conf DEFAULT network_api_class nova.network.neutronv2.api.API
+# openstack-config --set /etc/nova/nova.conf DEFAULT neutron_url http://<OpenContrail controller IP>:9696
+# openstack-config --set /etc/nova/nova.conf DEFAULT neutron_admin_auth_url http://<OpenStack controller IP>:35357/v2.0
+# openstack-config --set /etc/nova/nova.conf DEFAULT  compute_driver nova.virt.libvirt.LibvirtDriver
+# openstack-config --set /etc/nova/nova.conf DEFAULT  novncproxy_port 5999
+```
+
+* Restart Nova services.
+```
+# systemctl restart openstack-nova-api restart
+# systemctl restart openstack-nova-conductor restart
+# systemctl restart openstack-nova-scheduler restart
+# systemctl restart openstack-nova-novncproxy restart
+# systemctl restart openstack-nova-consoleauth restart
+```
+
+## 4 OpenContrail controller
 Contrail installation and provisioning are done by Fab utility on the builder (one server in the cluster or a separate server). All `fab` command has to be executed in `/opt/contrail/utils` directory.
 
 * Copy `contrail-install-packages-2.0-22~icehouse.el7.noarch.rpm` onto VM and install it.
@@ -81,7 +151,7 @@ Contrail installation and provisioning are done by Fab utility on the builder (o
 # ./setup.sh
 ```
 
-* Create `/opt/contrail/utils/fabfile/testbeds/testbed.py`. An example is in Appendix B.
+* Create `/opt/contrail/utils/fabfile/testbeds/testbed.py`. An example is in Appendix C.
 In case that compute nodes are installed separately, don't put compute nodes in `testbed.py` for now.
 
 * Install Contrail installation package.
@@ -124,6 +194,62 @@ This step is not required is compute nodes are installed separately.
 
 
 ## Appendix A
+```
+== Nova services ==
+openstack-nova-api:                     active
+openstack-nova-cert:                    active
+openstack-nova-compute:                 inactive
+openstack-nova-network:                 inactive  (disabled on boot)
+openstack-nova-scheduler:               active
+openstack-nova-volume:                  inactive  (disabled on boot)
+openstack-nova-conductor:               active
+== Glance services ==
+openstack-glance-api:                   active
+openstack-glance-registry:              active
+== Keystone service ==
+openstack-keystone:                     active
+== Horizon service ==
+openstack-dashboard:                    active
+== neutron services ==
+neutron-server:                         inactive
+neutron-dhcp-agent:                     active
+neutron-l3-agent:                       active
+neutron-metadata-agent:                 active
+neutron-lbaas-agent:                    inactive  (disabled on boot)
+neutron-openvswitch-agent:              active
+neutron-linuxbridge-agent:              inactive  (disabled on boot)
+neutron-ryu-agent:                      inactive  (disabled on boot)
+neutron-nec-agent:                      inactive  (disabled on boot)
+neutron-mlnx-agent:                     inactive  (disabled on boot)
+neutron-metering-agent:                 inactive  (disabled on boot)
+== Swift services ==
+openstack-swift-proxy:                  active
+openstack-swift-account:                active
+openstack-swift-container:              active
+openstack-swift-object:                 active
+== Cinder services ==
+openstack-cinder-api:                   active
+openstack-cinder-scheduler:             active
+openstack-cinder-volume:                active
+openstack-cinder-backup:                active
+== Ceilometer services ==
+openstack-ceilometer-api:               active
+openstack-ceilometer-central:           active
+openstack-ceilometer-compute:           active
+openstack-ceilometer-collector:         active
+openstack-ceilometer-alarm-notifier:    active
+openstack-ceilometer-alarm-evaluator:   active
+openstack-ceilometer-notification:      active
+== Support services ==
+libvirtd:                               active
+openvswitch:                            active
+dbus:                                   active
+tgtd:                                   inactive  (disabled on boot)
+rabbitmq-server:                        active
+memcached:                              active
+```
+
+## Appendix B
 ```
 <domain type='kvm'>
   <name>vm135</name>
@@ -181,7 +307,7 @@ This step is not required is compute nodes are installed separately.
 </domain>
 ```
 
-## Appendix B
+## Appendix C
 ```
 from fabric.api import env
 
