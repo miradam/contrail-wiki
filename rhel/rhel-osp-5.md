@@ -4,6 +4,7 @@
 This guide is for integrating OpenContrail 2.0 with RHEL OSP 5 (OpenStack IceHouse on RHEL 7.0).
 
 In this example, three VMs are required.
+
 1. OpenStack controller
    See Appendix A for the list of installed services and their status.
 2. OpenContrail controller
