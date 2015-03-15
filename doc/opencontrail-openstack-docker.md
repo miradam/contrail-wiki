@@ -9,26 +9,27 @@ $ sudo apt-get install lxc-docker
 ```
 
 ## Add image to Glance
-Update /etc/glance/glance-api.conf.
+* Update /etc/glance/glance-api.conf.
 ```
  # Supported values for the 'container_format' image attribute
 -#container_formats=ami,ari,aki,bare,ovf
 +container_formats=ami,ari,aki,bare,ovf,docker
 ```
 
-Restart Glance API service.
+* Restart Glance API service.
 ```
 $ sudo service glance-api restart
 ```
 
-Download Docker image and add into Glance.
+* Download Docker image and add into Glance.
 ```
 $ sudo docker pull ubuntu
 $ source /etc/contrail/openstackrc
 $ sudo docker save ubuntu | glance image-create --name ubuntu --container-format=docker --disk-format=raw --is-public True
 ```
+Note, the image name in Glance and Docker have to be the same.
 
-In order for Nova to communicate with Docker over its local socket, add *nova* to the *docker* group and restart the compute service to pick up the change.
+* In order for Nova to communicate with Docker over its local socket, add *nova* to the *docker* group and restart the compute service to pick up the change.
 ```
 $ sudo usermod -G libvirtd,docker nova
 ```
@@ -52,6 +53,7 @@ On compute node, update /etc/nova/nova-compute.conf to set Nova driver and Docke
 +[docker]
 +vif_driver = novadocker.virt.docker.opencontrail.OpenContrailVIFDriver
 ``` 
+When Nova calls `driver.spawn()` in `_build_and_run_instance()` in `nova/compute/manager.py`, `DockerDriver.spawn` in `novadocker/virt/docker/driver.py` is invoked.
 
 Restart Nova compute service to apply all changes.
 ```
