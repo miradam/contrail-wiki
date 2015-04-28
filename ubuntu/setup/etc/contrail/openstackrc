@@ -1,0 +1,5 @@
+export OS_USERNAME=__admin_user__
+export OS_PASSWORD=__admin_password__
+export OS_TENANT_NAME=__admin_tenant__
+export OS_AUTH_URL=http://__auth_host__:5000/v2.0/
+export OS_NO_CACHE=1

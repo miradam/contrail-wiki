@@ -1,0 +1,14 @@
+SERVICE_TENANT=service
+SERVICE_TOKEN=__admin_token__
+AUTH_PROTOCOL=http
+ADMIN_TOKEN=__admin_password__
+CONTROLLER=__auth_host__
+AMQP_SERVER=__internal_vip__
+QUANTUM=__internal_vip__
+QUANTUM_PROTOCOL=http
+QUANTUM_PORT=9697
+COMPUTE=__host_ip__
+CONTROLLER_MGMT=__auth_host__
+INTERNAL_VIP=__internal_vip__
+CONTRAIL_INTERNAL_VIP=__internal_vip__
+
