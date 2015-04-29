@@ -46,6 +46,13 @@ Plus boot and swap partitions, the total disk space should be at least 600GB.
 
 ## 3 Build Contrail Controller
 
+Download and pack scripts.
+```
+$ git clone https://github.com/tonyliu0592/opencontrail.git
+$ cd opencontrail/ubuntu
+$ tar czf setup.tgz setup
+```
+
 Copy the following files to each server.
 * contrail-install-packages_2.10-39~ubuntu-14-04juno_all.deb
 * setup.tgz
