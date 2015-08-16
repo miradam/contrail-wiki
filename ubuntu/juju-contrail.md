@@ -45,9 +45,11 @@ $ juju bootstrap
 ### 1.2 Contrail repository
 Note, this is only required for the deployment with Juniper Contrail package. In case of using Launchpad PPA, this is not needed.
 
-* Install dpkg-dev package for dpkg-scanpackages.
+* Install required packages.
 ```
 $ sudo apt-get install dpkg-dev
+$ sudo apt-get install dpkg-sig
+$ sudo apt-get install rng-tools
 ```
 
 * Get Contrail installation package, install it and build a repository.
@@ -56,7 +58,40 @@ $ sudo dpkg -i contrail-install-packages_2.20-64~ubuntu-14-04icehouse_all.deb
 $ cd /opt/contrail
 $ mkdir repo
 $ tar -C repo -xzf contrail_packages/contrail_debs.tgz
-$ dpkg-scanpackages repo /dev/null | gzip -9c > repo/Packages.gz
+```
+
+* Generate GPG key.
+```
+$ sudo rngd -r /dev/urandom
+$ sudo cat /proc/sys/kernel/random/entropy_avail
+$ gpg --gen-key
+  4           # RSA (sign only)
+  4096        # 4096 bit
+  0           # key does not expire
+  y           # yes
+  contrail    # Real name
+  Enter       # Email address
+  Enter       # Comment
+  o           # OK
+  Enter       # passphrase
+  Enter       # confirm passphrase
+$ gpg --list-keys
+```
+
+* Export key into repo, sign packages, generate index and release files.
+```
+$ cd repo
+$ dpkg-sig --sign builder *.deb
+
+$ apt-ftparchive packages . > Packages
+$ sed -i 's/Filename: .\//Filename: /g' Packages 
+$ gzip -c Packages > Packages.gz
+
+$ apt-ftparchive release . > Release
+$ gpg --clearsign -o InRelease Release
+$ gpg -abs -o Release.gpg Release
+
+$ gpg --output key --armor --export <key ID>
 ```
 
 * Install HTTP server.
@@ -67,11 +102,14 @@ Update /etc/default/mini-httpd to enable the start.
 Update /etc/mini-httpd.conf to set host and root directory.
 
 * Set apt source.
-Add this line to /etc/apt/sources.list on target machine.
+On target machine, download GPG key and update apt source list.
 ```
-deb http://<host IP>/contrail repo/
+$ wget http://<server IP>/contrail/repo/key
+$ apt-key add key
+# Update /etc/apt/sources.list.
+# deb http://<host IP>/contrail/repo /
 ```
-No need to do this manually. Service charms will setup apt source.
+These steps are done by charm, no need to do them manually.
 
 
 ### 1.3 Target machine
@@ -167,6 +205,7 @@ Some services, like RabbitMQ, Cassandra, Contrail analytics (collector) and Cont
 Here is an example.
 ```
 juju add-machine lxc:1
+# Wait till the container is ready (agent-state: started).
 juju scp set-hosts.sh 1/lxc/0:
 juju run --machine 1/lxc/0 "sudo ./set-hosts.sh"
 juju deploy --to 1/lxc/0 trusty/rabbitmq-server
@@ -252,9 +291,24 @@ juju add-relation neutron-contrail:contrail-api contrail-configuration:contrail-
 juju add-relation neutron-contrail keystone
 
 juju add-relation contrail-webui keystone
-juju add-relation contrail-webui:contrail_api contrail-configuration:contrail-api
 juju add-relation contrail-webui:contrail_discovery contrail-configuration:contrail-discovery
-juju add-relation contrail-webui:cassandra cassandra:database
+```
+
+### 2.4 Contrail Configuration
+
+* Add link local service for metadata.
+```
+# config add global-vrouter --linklocal name=metadata,linklocal-address=169.254.169.254:80,fabric-address=<Nova controller>:8775
+```
+
+* Add vrouter configuration.
+```
+# config add vrouter <hostname> --address <IP address>
+```
+
+* Add BGP router configuration.
+```
+# config add bgp-router <hostname> --vendor Juniper --asn 64512 --address <IP address> --control
 ```
 
 
@@ -292,7 +346,6 @@ juju add-relation contrail-webui:cassandra cassandra:database
   * Restart supervisor-analytics service.
 
 * [2.2] neutron-api
-  * Update [APISERVER] in /etc/neutron/plugins/opencontrail/ContrailPlugin.ini, add-relation doesn't work.
   * Update quota_driver = neutron_plugin_contrail.plugins.opencontrail.quota.driver.QuotaDriver in /etc/neutron/neutron.conf.
 
 * [2.2] contrail-control
@@ -312,7 +365,7 @@ juju add-relation contrail-webui:cassandra cassandra:database
 
 * [2.2] contrail-webui
   * Install ntp.
-  * Update /etc/contrail/config.global.js, cause add-relation doesn't work.
+  * Update /etc/contrail/config.global.js, relations to neutron-api and contrail-analytics are missing.
   * Install supervisor.
   * Add the following files.
   ```
@@ -343,4 +396,12 @@ juju add-relation contrail-webui:cassandra cassandra:database
 
 
 
+The following packages have unmet dependencies:
+ contrail-web-core : Depends: nodejs (= 0.8.15-1contrail1) but 0.10.25~dfsg2-2ubuntu1 is to be installed
+E: Unable to correct problems, you have held broken packages.
+root@juju-machine-2-lxc-5:~# dpkg-query -l | grep nodejs
+ii  nodejs                           0.10.25~dfsg2-2ubuntu1                        amd64        evented I/O for V8 javascript
+root@juju-machine-2-lxc-5:~# apt-get install nodejs=0.8.15-1contrail1
+
+apt-get install openjdk-7-jre-headless=7u75-2.5.4-1~trusty1 
 
