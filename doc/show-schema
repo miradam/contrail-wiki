@@ -1,0 +1,126 @@
+#!/usr/bin/python
+
+import argparse
+from lxml import etree
+
+class Schema():
+    def __init__(self, schemafile):
+        self.tree = etree.parse(schemafile)
+        self.root = self.tree.getroot()
+
+    def comment_strip(self, s):
+        if not s or not s.startswith("#IFMAP-SEMANTICS-IDL"):
+            return
+        s = s.replace("\n", "").replace("'", "").replace(" ", "")
+        s = s.replace('#IFMAP-SEMANTICS-IDL', '')
+        if s.startswith('Exclude'):
+            l = s.split(';')
+            if len(l) > 1:
+                s = l[1]
+            else:
+                s = None
+        return s
+
+    def find_element_by_name(self, name):
+        for item in self.root:
+            if item.attrib and \
+                    item.attrib.has_key('name') and \
+                    item.attrib['name'] == name:
+                return item
+
+    def print_simple_type(self, type, indent):
+        indent_str = ''.ljust(indent)
+        print indent_str, [j.attrib['value'] \
+                for i in type.getchildren() \
+                    for j in i.getchildren() \
+                        if j.attrib and j.attrib.has_key('value')]
+
+    def print_complex_type(self, type, indent):
+        indent_str = ''.ljust(indent)
+        for i in type.getchildren()[0].getchildren():
+            if not i.attrib:
+                continue
+            print indent_str + '%s (%s)' %(i.attrib['name'], i.attrib['type'])
+            self.show_type(i.attrib['type'], indent + 2)
+
+    def show_type(self, type_name, indent):
+        if type_name.find('Type') < 0:
+            return
+        indent_str = ''.ljust(indent)
+        type = self.find_element_by_name(type_name)
+        if type.tag.find('simpleType') >= 0:
+            self.print_simple_type(type, indent)
+        elif type.tag.find('complexType') >= 0:
+            self.print_complex_type(type, indent)
+ 
+
+    def is_prop(self, item, name):
+        s = self.comment_strip(item.text)
+        if s and s.startswith('Property'):
+            s = s.replace('Property(', '').replace(')', '')
+            l = s.split(',')
+            if l[1] == name:
+                return l[0]
+
+    def show_property(self, res_name = None):
+        for item in self.root:
+            prop_name = self.is_prop(item, res_name)
+            if not prop_name:
+                continue
+            prop = self.find_element_by_name(prop_name)
+            print '  [P]%s (%s)' %(prop_name, prop.attrib['type'])
+            self.show_type(prop.attrib['type'], 6)
+
+    def is_ref(self, item, name):
+        s = self.comment_strip(item.text)
+        if s and s.startswith('Link'):
+            s = s.replace('Link(', '').replace(')', '')
+            l = s.split(',')
+            if (l[3] == '[ref]') and (l[1] == name):
+                return l[2]
+
+    def show_reference(self, res_name = None):
+        for item in self.root:
+            ref_name = self.is_ref(item, res_name)
+            if not ref_name:
+                continue
+            print '  [R]%s' %(ref_name)
+            name = res_name + '-' + ref_name
+            ref = self.find_element_by_name(name)
+            if ref and ref.attrib.has_key('type'):
+                print '    [Data]'
+                self.show_type(ref.attrib['type'], 4)
+
+    def show_resource(self, name = None):
+        for item in self.root:
+            if (item.tag == '{http://www.w3.org/2001/XMLSchema}element') and \
+                    (item.attrib.has_key('type')) and \
+                    (item.attrib['type'] == 'ifmap:IdentityType'):
+                if name and item.attrib['name'] != name:
+                    continue
+                print item.attrib['name']
+                self.show_property(item.attrib['name'])
+                self.show_reference(item.attrib['name'])
+                print ''
+
+    def list_resource(self):
+        for item in self.root:
+            if (item.tag == '{http://www.w3.org/2001/XMLSchema}element') and \
+                    (item.attrib.has_key('type')) and \
+                    (item.attrib['type'] == 'ifmap:IdentityType'):
+                print item.attrib['name']
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('cmd')
+    args = parser.parse_args()
+
+    with open("vnc_cfg.xsd") as f:
+        schema = Schema(f)
+        if args.cmd == 'list':
+            schema.list_resource()
+        elif args.cmd == 'all':
+            schema.show_resource()
+        else:
+            schema.show_resource(args.cmd)
+
