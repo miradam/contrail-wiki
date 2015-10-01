@@ -53,16 +53,16 @@ There are multiple options to find out how resources are connected and configure
 
 Here are some examples.
 
-* IPAM
-Create default-domain:demo:ipam-default.
+### IPAM
+* Create default-domain:demo:ipam-default.
 ```
 tenant = vnc.project_read(fq_name = 'default-domain:demo'.split(':')])
 ipam = vnc_api.NetworkIpam(name = 'ipam-default', parent_obj = tenant)
 vnc.network_ipam_create(ipam)
 ```
 
-* Policy
-Create default-domain:demo:policy-default to allow all traffic.
+### Policy
+* Create default-domain:demo:policy-default to allow all traffic.
 ```
 rule = vnc_api.PolicyRuleType(
         direction = '<>',
@@ -79,8 +79,8 @@ policy = vnc_api.NetworkPolicy(
 vnc.network_policy_create(policy)
 ```
 
-* Virtual Network
-Create default-domain:demo:red with 192.168.10.0/24.
+### Virtual Network
+* Create default-domain:demo:red with 192.168.10.0/24.
 ```
 vn = vnc_api.VirtualNetwork(name = 'red', parent_obj = tenant)
 ipam = vnc.network_ipam_read(fq_name = 'default-domain:demo:ipam-default'.split(':'))
@@ -90,7 +90,7 @@ vn.set_network_ipam(ref_obj = ipam, ref_data = vnc_api.VnSubnetsType([ipam_subne
 vnc.virtual_network_create(vn)
 ```
 
-Attach policy to virtual network.
+* Attach policy to virtual network.
 ```
 policy = vnc.network_policy_read(fq_name = 'default-domain:demo:policy-default'.split(':'))
 policy_type = vnc_api.VirtualNetworkPolicyType(
@@ -100,7 +100,7 @@ vn.add_network_policy(ref_obj = policy, ref_data = policy_type)
 vnc.virtual_network_update(vn)
 ```
 
-Set route target for virtual network default-domain:admin:public.
+* Set route target for virtual network default-domain:admin:public.
 ```
 vn = vnc.virtual_network_read(fq_name = 'default-domain:admin:public'.split(':'))
 route_targets = vnc_api.RouteTargetList(['target:64512:10000'])
@@ -108,8 +108,8 @@ vn.set_route_target_list(route_targets)
 vnc.virtual_network_update(vn)
 ```
 
-* Floating IP
-Create floating IP pool in virtual network default-domain:admin:public.
+### Floating IP
+* Create floating IP pool in virtual network default-domain:admin:public.
 ```
 vn = vnc.virtual_network_read(fq_name = 'default-domain:admin:public'.split(':'))
 pool = vnc_api.FloatingIpPool(name = 'public-pool', parent_obj = vn)
@@ -122,7 +122,7 @@ tenant.add_floating_ip_pool(pool)
 vnc.project_update(tenant)
 ```
 
-Allocate floating IP.
+* Allocate floating IP.
 ```
 id = str(uuid.uuid4())
 pool = vnc.floating_ip_pool_read(fq_name = 'default-domain:admin:public:public-pool'.split(':'))
@@ -131,7 +131,7 @@ fip.uuid = id
 vnc.floating_ip_create(fip)
 ```
 
-Assign floating IP to virtual machine interface.
+* Assign floating IP to virtual machine interface.
 ```
 vm = vnc.virtual_machine_read(id = <VM UUID>)
 
