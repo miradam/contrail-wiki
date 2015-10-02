@@ -38,8 +38,11 @@ Here is an example.
 ```
 from vnc_api import vnc_api
 
-vnc = vnc_api.VncApi(username = "admin", password = "password",
-        tenant_name = "admin", api_server_host = "10.1.1.1",
+vnc = vnc_api.VncApi(
+        username = "admin",
+        password = "password",
+        tenant_name = "admin",
+        api_server_host = "10.1.1.1",
         auth_host = "10.1.1.2")
 ```
 
@@ -54,15 +57,18 @@ There are multiple options to find out how resources are connected and configure
 Here are some examples.
 
 ### IPAM
-* Create default-domain:demo:ipam-default.
+* Create IPAM default-domain:demo:ipam-default.
 ```
-tenant = vnc.project_read(fq_name = 'default-domain:demo'.split(':')])
-ipam = vnc_api.NetworkIpam(name = 'ipam-default', parent_obj = tenant)
+tenant = vnc.project_read(
+        fq_name = 'default-domain:demo'.split(':')])
+ipam = vnc_api.NetworkIpam(
+        name = 'ipam-default',
+        parent_obj = tenant)
 vnc.network_ipam_create(ipam)
 ```
 
 ### Policy
-* Create default-domain:demo:policy-default to allow all traffic.
+* Create policy default-domain:demo:policy-default to allow all traffic.
 ```
 rule = vnc_api.PolicyRuleType(
         direction = '<>',
@@ -80,58 +86,79 @@ vnc.network_policy_create(policy)
 ```
 
 ### Virtual Network
-* Create default-domain:demo:red with 192.168.10.0/24.
+* Create virtual network default-domain:demo:red with 192.168.10.0/24.
 ```
-vn = vnc_api.VirtualNetwork(name = 'red', parent_obj = tenant)
-ipam = vnc.network_ipam_read(fq_name = 'default-domain:demo:ipam-default'.split(':'))
-subnet = vnc_api.subnetType(ip_prefix = '192.168.10.0', ip_prefix_len = 24)
-ipam_subnet = vnc_api.IpamSubnetType(subnet = subnet, default_gateway = '192.168.10.1')
-vn.set_network_ipam(ref_obj = ipam, ref_data = vnc_api.VnSubnetsType([ipam_subnet]))
+vn = vnc_api.VirtualNetwork(
+        name = 'red',
+        parent_obj = tenant)
+ipam = vnc.network_ipam_read(
+        fq_name = 'default-domain:demo:ipam-default'.split(':'))
+subnet = vnc_api.subnetType(
+        ip_prefix = '192.168.10.0',
+        ip_prefix_len = 24)
+ipam_subnet = vnc_api.IpamSubnetType(
+        subnet = subnet,
+        default_gateway = '192.168.10.1')
+vn.set_network_ipam(
+        ref_obj = ipam,
+        ref_data = vnc_api.VnSubnetsType([ipam_subnet]))
 vnc.virtual_network_create(vn)
 ```
 
-* Attach policy to virtual network.
+* Attach the policy to a virtual network.
 ```
-policy = vnc.network_policy_read(fq_name = 'default-domain:demo:policy-default'.split(':'))
+policy = vnc.network_policy_read(
+        fq_name = 'default-domain:demo:policy-default'.split(':'))
 policy_type = vnc_api.VirtualNetworkPolicyType(
         sequence = vnc_api.SequenceType(major = 0, minor = 0))
-vn = vnc.virtual_network_read(fq_name = 'default-domain:demo:red'.split(':'))
-vn.add_network_policy(ref_obj = policy, ref_data = policy_type)
+vn = vnc.virtual_network_read(
+        fq_name = 'default-domain:demo:red'.split(':'))
+vn.add_network_policy(
+        ref_obj = policy,
+        ref_data = policy_type)
 vnc.virtual_network_update(vn)
 ```
 
 * Set route target for virtual network default-domain:admin:public.
 ```
-vn = vnc.virtual_network_read(fq_name = 'default-domain:admin:public'.split(':'))
+vn = vnc.virtual_network_read(
+        fq_name = 'default-domain:admin:public'.split(':'))
 route_targets = vnc_api.RouteTargetList(['target:64512:10000'])
 vn.set_route_target_list(route_targets)
 vnc.virtual_network_update(vn)
 ```
 
 ### Floating IP
-* Create floating IP pool in virtual network default-domain:admin:public.
+* Create a floating IP pool in virtual network default-domain:admin:public.
 ```
-vn = vnc.virtual_network_read(fq_name = 'default-domain:admin:public'.split(':'))
-pool = vnc_api.FloatingIpPool(name = 'public-pool', parent_obj = vn)
+vn = vnc.virtual_network_read(
+        fq_name = 'default-domain:admin:public'.split(':'))
+pool = vnc_api.FloatingIpPool(
+        name = 'public-pool',
+        parent_obj = vn)
 vnc.floating_ip_pool_create(pool)
 
 # Add reference to floating IP pool in the tenant who will need to
 # allocate floating IP.
-tenant = vnc.project_read(fa_name = 'default-domain:demo'.split(':'))
+tenant = vnc.project_read(
+        fa_name = 'default-domain:demo'.split(':'))
 tenant.add_floating_ip_pool(pool)
 vnc.project_update(tenant)
 ```
 
-* Allocate floating IP.
+* Allocate a floating IP.
 ```
 id = str(uuid.uuid4())
-pool = vnc.floating_ip_pool_read(fq_name = 'default-domain:admin:public:public-pool'.split(':'))
-fip = vnc_api.FloatingIp(name = id, parent_obj = pool)
+pool = vnc.floating_ip_pool_read(
+        fq_name = 'default-domain:admin:public:public-pool'.split(':'))
+fip = vnc_api.FloatingIp(
+        name = id,
+        parent_obj = pool)
 fip.uuid = id
 vnc.floating_ip_create(fip)
 ```
 
-* Assign floating IP to virtual machine interface.
+* Assign a floating IP to a virtual machine interface.
 ```
 vm = vnc.virtual_machine_read(id = <VM UUID>)
 
@@ -139,14 +166,132 @@ vm = vnc.virtual_machine_read(id = <VM UUID>)
 if_id = vm.get_virtual_machine_interfaces()[0]['uuid']
 if_obj = vnc.virtual_machine_interface_read(id = if_id)
 
-tenant = vnc.project_read(fq_name = 'default-domain:demo'.split(':'))
+tenant = vnc.project_read(
+        fq_name = 'default-domain:demo'.split(':'))
 fip.add_project(tenant)
 fip.add_virtual_machine_interface(if_obj)
 vnc.floating_ip_update(fip)
 ```
 
+### Service Chain
+* Create a service template.
+```
+template = vnc_api.ServiceTemplate(
+        name = "firewall")
+properties = vnc_api.ServiceTemplateType(
+        service_mode = 'in-network',
+        service_type = 'firewall',
+        image_name = 'vsrx')                
+properties.add_interface_type(
+        vnc_api.ServiceTemplateInterfaceType(
+            service_interface_type = 'left',
+            shared_ip = False))
+properties.add_interface_type(
+        vnc_api.ServiceTemplateInterfaceType(
+            service_interface_type = 'right',
+            shared_ip = False))
+template.set_service_template_properties(properties)
+vnc.service_template_create(template)
+```
 
-### Appendix A Data Model Graph
+* Launch a service instance.
+```
+tenant = vnc.project_read(
+        fq_name = ['default-domain:demo'.split(':'))
+instance = vnc_api.ServiceInstance(
+        name = 'firewall',
+        parent_obj = tenant)
+properties = vnc_api.ServiceInstanceType(
+        scale_out = vnc_api.ServiceScaleOutType())
+instance.set_service_instance_properties(properties)
+instance.set_service_template(template)
+vnc.service_instance_create(instance)
+```
+
+* Create a service policy.
+```
+rule = vnc_api.PolicyRuleType(
+    direction = '<>',
+    protocol = 'any',
+    action_list = vnc_api.ActionListType(
+        apply_service = ['default-domain:demo:firewall']),
+    src_addresses = [vnc_api.AddressType(
+        virtual_network = 'default-domain:demo:left-vn')],
+    src_ports = [vnc_api.PortType(start_port = -1, end_port = -1)],
+    dst_addresses = [vnc_api.AddressType(
+        virtual_network = 'default-domain:demo:right-vn')],
+    dst_ports = [vnc_api.PortType(start_port = -1, end_port = -1)])
+policy = vnc_api.NetworkPolicy(
+    name = 'policy-firewall',
+    parent_obj = tenant,
+    network_policy_entries = vnc_api.PolicyEntriesType([rule]))
+vnc.network_policy_create(policy)
+```
+
+### CPE
+* Create a CPE type of physical router based on vrouter default-global-system-config:cpe-acme.
+```
+gsc = vnc.global_system_config_read(fq_name = ['default-global-system-config'])
+prouter = vnc_api.PhysicalRouter(
+        name = 'cpe-acme',
+        parent_obj = gsc,
+        physical_router_management_ip = '10.1.1.1',
+        physical_router_dataplane_ip = '10.1.1.1',
+        physical_router_vendor_name = 'Juniper',
+        physical_router_product_name = 'CPE',
+        physical_router_vnc_managed = True,
+        physical_router_user_credentials = vnc_api.UserCredentials(
+            username = 'root',
+            password = 'password'))
+vrouter = vnc.virtual_router_read(
+        fq_name = 'default-global-system-config:cpe-acme'.split(':'))
+prouter.add_virtual_router(vrouter)
+vnc.physical_router_create(prouter)
+```
+
+* Create a physical interface.
+```
+pif = vnc_api.PhysicalInterface(
+        name = 'p1p1',
+        parent_obj = prouter)
+vnc.physical_interface_create(pif)
+```
+
+* Create logical interface and attach subnet to it.
+```
+# Create a virtual network default-domain:demo:acme with subnet 192.168.100.0/24 where IP address will be allocated from.
+# Create a VM interface on the virutual network.
+id = str(uuid.uuid4())
+vmi = vnc_api.VirtualMachineInterface(
+        name = id,
+        parent_obj = tenant)
+vmi.uuid = id
+vmi.add_virtual_network(vn)
+vnc.virtual_machine_interface_create(vmi)
+
+# Choose a subnet from user virtual network (192.168.100.0/24 from acme), create a user subnet and link it to the virtual machine interface.
+id = str(uuid.uuid4())
+subnet = vnc_api.Subnet(
+        name = id,
+        subnet_ip_prefix = vnc_api.SubnetType(
+            ip_prefix = 192.168.100.0,
+            ip_prefix_len = 24))
+subnet.uuid = id
+subnet.add_virtual_machine_interface(vmi)
+vnc.subnet_create(subnet)
+
+# Create a logical interface and link it to the virtual machine interface.
+lif = vnc_api.LogicalInterface(
+        name = 'p1p1.0',
+        parent_obj = pif,
+        logical_interface_vlan_tag = 0,
+        logical_interface_type = 'l3')
+lif.add_virtual_machine_interface(vmi)
+vnc.logical_interface_create(lif)
+```
+
+
+### Appendix A. Data Model Graph
 
 Data model graph can be generated from vnc_api/gen/vnc_api_schema.py. Some additional package are required. Here is an example.
 ```
