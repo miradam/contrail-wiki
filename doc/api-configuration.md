@@ -4,9 +4,9 @@
 
 ### 1.1 Data Model
 
-Configuration data model [vnc_cfg.xsd](https://github.com/Juniper/contrail-controller/blob/master/src/schema/vnc_cfg.xsd)is defined in XML Schema Definition (XSD) format.
+Configuration data model [vnc_cfg.xsd](https://github.com/Juniper/contrail-controller/blob/master/src/schema/vnc_cfg.xsd) is defined in XML Schema Definition (XSD) format.
 
-Data model defines all configuration resources and their properties and relations.
+Data model defines all configuration resources, their properties and relations.
 
 
 ### 1.2 REST API and Python API
@@ -51,7 +51,7 @@ vnc = vnc_api.VncApi(
 
 There are multiple options to find out how resources are connected and configured.
 * Read vnc_cfg.xsd to see all resources and their properties, links, etc.
-* Read resource_common.py and resource_xsd.py to see how to use Python configure resources.
+* Read resource_common.py and resource_xsd.py to see how to use Python API configure resources.
 * Run [show-schema](show-schema) that reads vnc_cfg.xsd and show resources, "show-schema list", "show-schema all", "show-schema <resource name>".
 
 Here are some examples.
@@ -146,7 +146,7 @@ tenant.add_floating_ip_pool(pool)
 vnc.project_update(tenant)
 ```
 
-* Allocate a floating IP.
+* Allocate a floating IP from floating IP pool.
 ```
 id = str(uuid.uuid4())
 pool = vnc.floating_ip_pool_read(
@@ -231,7 +231,8 @@ vnc.network_policy_create(policy)
 ### CPE
 * Create a CPE type of physical router based on vrouter default-global-system-config:cpe-acme.
 ```
-gsc = vnc.global_system_config_read(fq_name = ['default-global-system-config'])
+gsc = vnc.global_system_config_read(
+        fq_name = ['default-global-system-config'])
 prouter = vnc_api.PhysicalRouter(
         name = 'cpe-acme',
         parent_obj = gsc,
@@ -259,7 +260,9 @@ vnc.physical_interface_create(pif)
 
 * Create logical interface and attach subnet to it.
 ```
-# Create a virtual network default-domain:demo:acme with subnet 192.168.100.0/24 where IP address will be allocated from.
+# Create a virtual network default-domain:demo:acme with
+# subnet 192.168.100.0/24 where IP address will be allocated from.
+
 # Create a VM interface on the virutual network.
 id = str(uuid.uuid4())
 vmi = vnc_api.VirtualMachineInterface(
@@ -269,7 +272,8 @@ vmi.uuid = id
 vmi.add_virtual_network(vn)
 vnc.virtual_machine_interface_create(vmi)
 
-# Choose a subnet from user virtual network (192.168.100.0/24 from acme), create a user subnet and link it to the virtual machine interface.
+# Choose a subnet from user virtual network (192.168.100.0/24 from acme),
+# create a user subnet and link it to the virtual machine interface.
 id = str(uuid.uuid4())
 subnet = vnc_api.Subnet(
         name = id,
