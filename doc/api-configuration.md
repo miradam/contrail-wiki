@@ -54,10 +54,12 @@ There are multiple options to find out how resources are connected and configure
 * Read resource_common.py and resource_xsd.py to see how to use Python API configure resources.
 * Run [show-schema](show-schema) that reads vnc_cfg.xsd and show resources, "show-schema list", "show-schema all", "show-schema <resource name>".
 
-Here are some examples.
+
+## 4 Examples
 
 ### IPAM
-* Create IPAM default-domain:demo:ipam-default.
+#### Create IPAM
+Create IPAM default-domain:demo:ipam-default.
 ```
 tenant = vnc.project_read(
         fq_name = 'default-domain:demo'.split(':')])
@@ -68,7 +70,8 @@ vnc.network_ipam_create(ipam)
 ```
 
 ### Policy
-* Create policy default-domain:demo:policy-default to allow all traffic.
+#### Create policy
+Create policy default-domain:demo:policy-default to allow all traffic.
 ```
 rule = vnc_api.PolicyRuleType(
         direction = '<>',
@@ -86,7 +89,8 @@ vnc.network_policy_create(policy)
 ```
 
 ### Virtual Network
-* Create virtual network default-domain:demo:red with 192.168.10.0/24.
+#### Create virtual network
+Create virtual network default-domain:demo:red with subnet 192.168.10.0/24.
 ```
 vn = vnc_api.VirtualNetwork(
         name = 'red',
@@ -105,7 +109,8 @@ vn.set_network_ipam(
 vnc.virtual_network_create(vn)
 ```
 
-* Attach the policy to a virtual network.
+#### Attach policy
+Attach policy policy-default to virtual network red.
 ```
 policy = vnc.network_policy_read(
         fq_name = 'default-domain:demo:policy-default'.split(':'))
@@ -119,7 +124,8 @@ vn.add_network_policy(
 vnc.virtual_network_update(vn)
 ```
 
-* Set route target for virtual network default-domain:admin:public.
+#### Set route target
+Set route target for virtual network default-domain:admin:public.
 ```
 vn = vnc.virtual_network_read(
         fq_name = 'default-domain:admin:public'.split(':'))
@@ -129,7 +135,8 @@ vnc.virtual_network_update(vn)
 ```
 
 ### Floating IP
-* Create a floating IP pool in virtual network default-domain:admin:public.
+#### Create floating IP pool
+Create floating IP pool in virtual network default-domain:admin:public. The pool is the address space of virtual network subnet(s).
 ```
 vn = vnc.virtual_network_read(
         fq_name = 'default-domain:admin:public'.split(':'))
@@ -146,7 +153,8 @@ tenant.add_floating_ip_pool(pool)
 vnc.project_update(tenant)
 ```
 
-* Allocate a floating IP from floating IP pool.
+#### Allocate floating IP
+Allocate a floating IP from the floating IP pool.
 ```
 id = str(uuid.uuid4())
 pool = vnc.floating_ip_pool_read(
@@ -158,7 +166,8 @@ fip.uuid = id
 vnc.floating_ip_create(fip)
 ```
 
-* Assign a floating IP to a virtual machine interface.
+#### Assign floating IP
+Assign a floating IP to a virtual machine interface.
 ```
 vm = vnc.virtual_machine_read(id = <VM UUID>)
 
@@ -174,7 +183,8 @@ vnc.floating_ip_update(fip)
 ```
 
 ### Service Chain
-* Create a service template.
+#### Create service template
+Create a service template.
 ```
 template = vnc_api.ServiceTemplate(
         name = "firewall")
@@ -194,7 +204,8 @@ template.set_service_template_properties(properties)
 vnc.service_template_create(template)
 ```
 
-* Launch a service instance.
+#### Launch service instance
+Launch a service instance.
 ```
 tenant = vnc.project_read(
         fq_name = ['default-domain:demo'.split(':'))
@@ -208,7 +219,8 @@ instance.set_service_template(template)
 vnc.service_instance_create(instance)
 ```
 
-* Create a service policy.
+#### Create service policy
+Create a service chain policy. Attach the service policy to the left and right virtual networks. All traffic between left and right virtuan networks will go through the service chain as the order defined in service policy.
 ```
 rule = vnc_api.PolicyRuleType(
     direction = '<>',
@@ -226,6 +238,45 @@ policy = vnc_api.NetworkPolicy(
     parent_obj = tenant,
     network_policy_entries = vnc_api.PolicyEntriesType([rule]))
 vnc.network_policy_create(policy)
+```
+
+### DNS
+There are 4 options to configure DNS service for VM instance.
+* No DNS: DNS server is the second address of subnet, set by DHCP to VM. No DNS service is provided.
+* Default DNS: The default type when no DNS configuration is provided. DNS server is the second address of subnet, set by DHCP to VM. DNS request from VM -> DNS server (vRouter) -> vRouter agent -> DNS configuration on the compute node.
+* Tenant DNS: DNS service is provided by tenant. DNS server is set to be tenant DNS server(s) by DHCP. DNS server could be some VM in virtual network or server in physical network, as long as it's reachable by VM.
+* Virtual DNS: vDNS service runs on controller. DNS request from VM -> DNS server (vRouter) -> vRouter agent -> control node -> vDNS service. vDNS has an option of the next DNS server (forwarder). Total 16 servers can be chained together. There are 3 types of next DNS server.
+  * Default, is provided by DNS on controller.
+  * vDNS, is provided by another vDNS on controller.
+  * Fabric, is provided by any DNS server that is reachable by control node.
+
+#### Create virtual DNS
+Create a virtual DNS. The next_virtual_DNS could be 'None', the name of another virtual DNS server or the IP address of DNS server reachable by fabric.
+```
+data = vnc_api.VirtualDnsType(
+        domain_name = 'demo',
+        dynamic_records_from_client = True,
+        record_order = 'random',
+        default_ttl_seconds = 86400,
+        next_virtual_DNS = 'default-domain:another-virtual-dns')
+obj = vnc_api.VirtualDns(
+        name = 'vdns',
+        virtual_DNS_data = data)
+vnc.virtual_DNS_create(obj)
+```
+
+#### Configure DNS in IPAM
+```
+ipam = vnc_api.NetworkIpam(
+        name = 'ipam-dns',
+        parent_obj = tenant)
+mgmt = vnc_api.IpamType()
+mgmt.set_ipam_dns_method('virtual-dns-server')
+mgmt.set_ipam_dns_server(
+        vnc_api.IpamDnsAddressType(
+            virtual_dns_server_name = 'vdns'))
+ipam.set_network_ipam_mgmt(mgmt)
+vnc.network_ipam_create(ipam)
 ```
 
 ### CPE
