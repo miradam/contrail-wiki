@@ -280,7 +280,10 @@ vnc.network_ipam_create(ipam)
 ```
 
 ### CPE
-* Create a CPE type of physical router based on vrouter default-global-system-config:cpe-acme.
+A compute node equitped with vrouter can be configured as a CPE device and deployed at customer's premise. Customer can connect a subnet directly to the compute node or a local router to the compute node.
+
+#### Create physical router
+Create a CPE type of physical router based on vrouter default-global-system-config:cpe-acme.
 ```
 gsc = vnc.global_system_config_read(
         fq_name = ['default-global-system-config'])
@@ -301,7 +304,8 @@ prouter.add_virtual_router(vrouter)
 vnc.physical_router_create(prouter)
 ```
 
-* Create a physical interface.
+#### Create physical interface
+Create a physical interface. The name has to match the interface name on CPE/vrouter node.
 ```
 pif = vnc_api.PhysicalInterface(
         name = 'p1p1',
@@ -309,7 +313,8 @@ pif = vnc_api.PhysicalInterface(
 vnc.physical_interface_create(pif)
 ```
 
-* Create logical interface and attach subnet to it.
+#### Create logical interface
+Create logical interface and attach subnet to it.
 ```
 # Create a virtual network default-domain:demo:acme with
 # subnet 192.168.100.0/24 where IP address will be allocated from.
