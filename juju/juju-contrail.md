@@ -1,4 +1,4 @@
-# Deploy Contrail Cloud by Juju
+# Deploy Contrail Networking by Juju
 
 This guidance shows how to deploy a Contrail Cloud (based on OpenStack and OpenContrail) by Juju charms.
 
@@ -184,13 +184,13 @@ Wait a few minutes until the GUI server is up. User name and password are in ~/.
 ```
 $ sudo apt-get install bzr
 $ mkdir -p charms/trusty
-$ bzr branch lp:~sdn-charmers/charms/trusty/quantum-gateway/contrail charms/trusty/quantum-gateway-contrail
 $ bzr branch lp:~sdn-charmers/charms/trusty/contrail-analytics/trunk charms/trusty/contrail-analytics
 $ bzr branch lp:~sdn-charmers/charms/trusty/contrail-configuration/trunk charms/trusty/contrail-configuration
 $ bzr branch lp:~sdn-charmers/charms/trusty/contrail-control/trunk charms/trusty/contrail-control
 $ bzr branch lp:~sdn-charmers/charms/trusty/contrail-webui/trunk charms/trusty/contrail-webui
 $ bzr branch lp:~sdn-charmers/charms/trusty/neutron-contrail/trunk charms/trusty/neutron-contrail
 $ bzr branch lp:~sdn-charmers/charms/trusty/neutron-api-contrail/trunk charms/trusty/neutron-api-contrail
+$ bzr branch lp:~sdn-charmers/charms/trusty/quantum-gateway/contrail charms/trusty/quantum-gateway-contrail
 $ export JUJU_REPOSITORY=charms
 ```
 
@@ -234,6 +234,9 @@ nova-cloud-controller:
 
 nova-compute:
   manage-neutron-plugin-legacy-mode: False
+
+cassandra:
+  allow-single-node: true
 ```
 
 ### 2.2 Install services
@@ -314,7 +317,6 @@ for service in \
     "trusty/glance" \
     "trusty/openstack-dashboard" \
     "trusty/neutron-api" \
-    "trusty/cassandra" \
     "trusty/zookeeper" \
     "local:trusty/contrail-configuration" \
     "local:trusty/contrail-control" \
@@ -322,12 +324,14 @@ for service in \
     "local:trusty/contrail-webui"
 do
     container_create 1
-    juju scp set-hosts.sh $cid:
-    juju run --machine $cid "sudo ./set-hosts.sh"
+    juju scp host-provision.sh $cid:
+    juju run --machine $cid "sudo ./host-provision.sh"
     echo "Deploy service $service..."
     juju deploy --to $cid $service
     echo ""
 done
+
+juju deploy --to lxc:1 --config config.yaml precise/cassandra
 
 echo "Deploy compute node..."
 juju deploy --to 2 --config config.yaml trusty/nova-compute
@@ -394,98 +398,4 @@ juju add-relation contrail-webui:contrail_discovery contrail-configuration:contr
 ```
 # config add bgp-router <hostname> --vendor Juniper --asn 64512 --address <IP address> --control
 ```
-
-
-* [2.2] rabbitmq-server
-  * Configuration API server can't connect to RabbitMQ server, in contrail-api.conf, vhost is 'contrail', but on RabbitMQ server side, log shows the user 'contrail' tries to access vhost 'contraio/'. Not sure if API server appends the '/'. The workaround is to create vhost 'contrail/' and set permissions for user 'contrail'.
-    ```
-    $ rabbitmqctl add_vhost contrail/
-    $ rabbitmqctl set_permissions -p contrail/ contrail ".*" ".*" ".*"
-    ```
-
-* [2.2] contrail-configuration
-  * Move [KEYSTONE] from contrail-api.conf to /etc/contrail/contrail-keystone-auth.conf. This is optional, [KEYSTONE] in contrail-api.conf will still work.
-  * Add /etc/contrail/supervisord_config_files/ifmap.ini.
-  * Install node manager.
-  ```
-  apt-get install contrail-nodemgr
-  ```
-  * Add the following files.
-  ```
-  /etc/contrail/supervisord_config_files/contrail-nodemgr-config.ini
-  /etc/contrail/contrail-config-nodemgr.conf
-  ```
-  * Restart supervisor-config service.
-
-* [2.2] contrail-analytics
-  * Install node manager.
-  ```
-  apt-get install contrail-nodemgr
-  ```
-  * Add the following files.
-  ```
-  /etc/contrail/supervisord_config_files/contrail-nodemgr-analytics.ini
-  /etc/contrail/contrail-analytics-nodemgr.conf
-  ```
-  * Restart supervisor-analytics service.
-
-* [2.2] neutron-api
-  * Update quota_driver = neutron_plugin_contrail.plugins.opencontrail.quota.driver.QuotaDriver in /etc/neutron/neutron.conf.
-
-* [2.2] contrail-control
-  * Install ntp.
-  * Install node manager.
-  ```
-  apt-get install contrail-nodemgr
-  ```
-  * Add the following files.
-  ```
-  /etc/contrail/supervisord_config_files/contrail-nodemgr-control.ini
-  /etc/contrail/contrail-control-nodemgr.conf
-  ```
-  * Restart supervisor-control service.
-  * In case the connection to ifmap server failed because of authentication, check /etc/ifmap-server/basicauthusers.properties, ensure no duplicated user name.
-  * Add configuration of control node.
-
-* [2.2] contrail-webui
-  * Install ntp.
-  * Update /etc/contrail/config.global.js, relations to neutron-api and contrail-analytics are missing.
-  * Install supervisor.
-  * Add the following files.
-  ```
-  /etc/init/supervisor-webui
-  /etc/contrail/supervisord_webui.conf
-  /etc/contrail/supervisord_webui_files/contrail-webui.ini
-  /etc/contrail/supervisord_webui_files/contrail-webui-middleware.ini
-  ```
-  * Create /var/log/contrail directory.
-  * Start supervisor-webui service.
-
-* [2.2] nova-compute
-  * Install node manager.
-  ```
-  apt-get install contrail-nodemgr
-  ```
-  * Add the following files.
-  ```
-  /etc/contrail/supervisord_vrouter_files/contrail-nodemgr-vrouter.ini
-  /etc/contrail/supervisord_vrouter_files/contrail-vrouter.rules
-  /etc/contrail/contrail-vrouter-nodemgr.conf
-  ```
-  * Add [NETWORKS] into /etc/contrail/contrail-vrouter-agent.conf, so Web UI shows the IP of this vrouter.
-  ```
-  control_network_ip=10.84.31.4
-  ```
-  * Add configuration of vrouter.
-
-
-
-The following packages have unmet dependencies:
- contrail-web-core : Depends: nodejs (= 0.8.15-1contrail1) but 0.10.25~dfsg2-2ubuntu1 is to be installed
-E: Unable to correct problems, you have held broken packages.
-root@juju-machine-2-lxc-5:~# dpkg-query -l | grep nodejs
-ii  nodejs                           0.10.25~dfsg2-2ubuntu1                        amd64        evented I/O for V8 javascript
-root@juju-machine-2-lxc-5:~# apt-get install nodejs=0.8.15-1contrail1
-
-apt-get install openjdk-7-jre-headless=7u75-2.5.4-1~trusty1 
 
