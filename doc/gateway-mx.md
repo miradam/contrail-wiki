@@ -24,6 +24,7 @@ interfaces {
 ```
 
 * The gateway ASN and BGP protocol.
+IBGP
 ```
 routing-options {
     autonomous-system 64512;
@@ -40,6 +41,29 @@ protocols {
             allow 10.1.1.0/24;
             neighbor 10.1.1.200;
             neighbor 10.1.1.201;
+        }
+    }
+}
+```
+
+EBGP
+```
+routing-options {
+    autonomous-system 64512;
+}
+protocols {
+    bgp {
+        group cluster-1 {
+            type external;
+            multihop;
+            local-address 10.84.63.168;
+            keep all;
+            family inet-vpn {
+                unicast;
+            }
+            peer-as 64520;
+            allow 10.84.29.0/24;
+            neighbor 10.84.29.96;
         }
     }
 }
