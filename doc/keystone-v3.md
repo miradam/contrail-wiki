@@ -207,6 +207,18 @@ service memcached restart
 User of non-default domain is able to login.
 
 
+## 6 Contrail Web UI
+
+### 6.1 /etc/contrail/config.global.js
+```
+config.identityManager.apiVersion = ['v3'];
+```
+
+### 6.2 Restart the service
+```
+service supervisor-webui restart
+```
+
 
 
 # Appendix
