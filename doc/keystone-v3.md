@@ -1,13 +1,14 @@
 1. Deploy OpenStack and Contrail with contrail-install-packages_3.0.2.0-51~ubuntu-14-04liberty_all.deb.
 
 ## 1 Keystone
-2. Check Keystone v2 and v3.
+
+### 1.1 Check Keystone v2 and v3
 ```
 curl -s http://localhost:35357/v3 | python -m json.tool
 curl -s http://localhost:35357/v2.0 | python -m json.tool 
 ```
 
-3. Grant user `admin` to domain `default` with role `admin`.
+### 1.2 Grant user `admin` to domain `default` with role `admin`
 
 * Get admin token from /etc/keystone/keystone.conf.
 
@@ -38,7 +39,8 @@ curl -s \
     http://localhost:5000/v3/domains/default/users/82e4bcb9077446fca46426defdbe3d21/roles/ccddea88ad3b4c53a06c50b4c269c18a
 ```
 
-4. Create /etc/contrail/openstackrc_v3.
+### 1.3 Create source file for Keystone v3
+/etc/contrail/openstackrc_v3
 ```
 export OS_USERNAME=admin
 export OS_PASSWORD=contrail123
@@ -51,7 +53,7 @@ export OS_REGION_NAME=RegionOne
 export OS_NO_CACHE=1
 ```
 
-5. Check Keystone v3 with openstack CLI.
+### 1.4 Check Keystone v3 with openstack CLI
 ```
 source /etc/contrail/openstackrc_v3
 openstack user list
@@ -59,7 +61,7 @@ openstack image list
 openstack network list
 ```
 
-6. Test.
+### 1.5 Test
 * Create a domain.
 * Create an user.
 * Grant the user to access domain as role `admin`.
@@ -69,7 +71,7 @@ openstack network list
 
 ## 2 Contrail
 
-1. /etc/contrail/contrail-keystone-auth.conf
+### 2.1 /etc/contrail/contrail-keystone-auth.conf
 ```
 [KEYSTONE]
 auth_url=http://10.87.64.166:35357/v3
@@ -83,7 +85,7 @@ memcache_servers=127.0.0.1:11211
 insecure=False
 ```
 
-2. Restart configuration services.
+### 2.2 Restart configuration services
 ```
 service supervisor-config restart
 ```
@@ -91,7 +93,7 @@ service supervisor-config restart
 
 ## 3 Neutron
 
-1. /etc/neutron/neutron.conf
+### 3.1 /etc/neutron/neutron.conf
 ```
 [keystone_authtoken]
 # Public identity API endpoint.
@@ -105,7 +107,7 @@ auth_host = 10.87.64.166
 auth_protocol = http
 ```
 
-2. Restart Neutron service.
+### 3.2 Restart Neutron service
 ```
 service neutron-server restart
 ```
@@ -113,7 +115,9 @@ service neutron-server restart
 
 ## 4 Nova
 
-1. Update /etc/nova/nova.conf for both Nova API on controller and Nova compute on compute node.
+### 4.1 Update Nova configuration
+
+Update /etc/nova/nova.conf for both Nova API on controller and Nova compute on compute node.
 ```
 #neutron_admin_tenant_name = service
 #neutron_admin_username = neutron
@@ -144,7 +148,7 @@ url_timeout = 300
 service_metadata_proxy = True
 ```
 
-2. Restart Nova API on controller and Nova compute on compute node.
+### 4.2 Restart Nova API on controller and Nova compute on compute node
 ```
 service nova-api restart
 ```
@@ -152,6 +156,7 @@ service nova-api restart
 service nova-compute restart
 ```
 
+### 4.3 Compute endpoint
 
 Compute endpoint requires tenant ID. Keystone v3 auth needs either tenant or domain, not both.
 ```
@@ -183,7 +188,7 @@ curl -s -i -X POST -H "Content-Type: application/json" -d '
 
 ## 5 Dashboard
 
-1. Update /etc/openstack-dashboard/local_settings.py.
+### 5.1 /etc/openstack-dashboard/local_settings.py
 ```
 OPENSTACK_API_VERSIONS = {
     "identity": 3,
@@ -192,13 +197,13 @@ OPENSTACK_KEYSTONE_MULTIDOMAIN_SUPPORT = True
 OPENSTACK_KEYSTONE_DEFAULT_DOMAIN = 'Default'
 ```
 
-2. Restart the service.
+### 5.2 Restart the service
 ```
 service apache2 restart
 service memcached restart
 ```
 
-3. Test.
+### 5.3 Test
 User of non-default domain is able to login.
 
 
